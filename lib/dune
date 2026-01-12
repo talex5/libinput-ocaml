@@ -1,0 +1,31 @@
+(library
+  (name input) ; note: can't use libinput here or the generated libinput.a will clash with the C one
+  (public_name libinput)
+  (libraries ctypes ctypes.foreign fmt)
+  (c_library_flags (:include c_library_flags.sexp))
+  (foreign_stubs
+    (language c)
+    (names stubs))
+  (ctypes
+    (external_library_name input)
+    (build_flags_resolver
+      ; Unlike dune-configurator, dune's cstubs support doesn't work with pkgconf,
+      ; so get the flags via configurator instead:
+      (vendored
+        (c_flags :standard (:include c_flags.sexp) -I.)
+        (c_library_flags :standard (:include c_library_flags.sexp))))
+    (headers (include "libinput.h" "fcntl.h" "stubs.h"))
+    (type_description
+      (instance Types)
+      (functor Type_description))
+    (function_description
+      (concurrency sequential)
+      (instance Functions)
+      (errno_policy ignore_errno)
+      (functor Function_description))
+    (generated_types Types_generated)
+    (generated_entry_point C)))
+
+(rule
+  (targets c_flags.sexp c_library_flags.sexp)
+  (action (run ./config/discover.exe)))
