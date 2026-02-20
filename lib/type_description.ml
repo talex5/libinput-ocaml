@@ -1,5 +1,16 @@
 open Ctypes
 
+(* Not checked with cstubs as it was only added in 1.27.0 *)
+module Area_rectangle = struct
+  type t = [`Libinput_config_area_rectangle] structure
+  let t : t typ = Ctypes.structure "libinput_config_area_rectangle"
+  let x1 = field t "x1" double
+  let y1 = field t "y1" double
+  let x2 = field t "x2" double
+  let y2 = field t "y2" double
+  let () = seal t
+end
+
 module Types (F : Ctypes.TYPE) = struct
   open F
 
@@ -35,14 +46,19 @@ module Types (F : Ctypes.TYPE) = struct
 
   let user_data = ptr void
 
-  let make_enum ?unexpected enum_name items =
-    let unexpected =
-      match unexpected with
-      | None -> fun x -> Fmt.failwith "Unknown %s value %Ld!" enum_name x
-      | Some x -> x
-    in
-    enum enum_name ~typedef:false ~unexpected
-      (List.map (fun (a, b) -> (b, enum_val a)) items)
+  let make_enum ?unexpected ?requires enum_name items =
+    match requires with
+    | Some min_version when min_version > Config.version ->
+      let error _ = Fmt.failwith "Requires libinput >= %a" Fmt.(pair int int) min_version in
+      view uint64_t ~read:error ~write:error
+    | _ ->
+      let unexpected =
+        match unexpected with
+        | None -> fun x -> Fmt.failwith "Unknown %s value %Ld!" enum_name x
+        | Some x -> x
+      in
+      enum enum_name ~typedef:false ~unexpected
+        (List.map (fun (a, b) -> (b, enum_val a)) items)
 
   module Libinput     = Struct(struct type t = [`Libinput]                       let name = "libinput"                       end)
   module Device_group = Struct(struct type t = [`Libinput_device_group]          let name = "libinput_device_group"          end)
@@ -134,10 +150,16 @@ module Types (F : Ctypes.TYPE) = struct
       | Button
       | Unknown of int64
 
-    let t = make_enum "libinput_config_eraser_button_mode" ~unexpected:(fun x -> Unknown x) [
-        "LIBINPUT_CONFIG_ERASER_BUTTON_DEFAULT", Default;
-        "LIBINPUT_CONFIG_ERASER_BUTTON_BUTTON", Button;
-      ]
+    let supported = Config.version > (1, 29)
+
+    let t =
+      make_enum "libinput_config_eraser_button_mode"
+        ~unexpected:(fun x -> Unknown x)
+        ~requires:(1, 29)
+        [
+          "LIBINPUT_CONFIG_ERASER_BUTTON_DEFAULT", Default;
+          "LIBINPUT_CONFIG_ERASER_BUTTON_BUTTON", Button;
+        ]
   end
 
   let proximity_state : [`Out|`In] typ =
@@ -363,33 +385,26 @@ module Types (F : Ctypes.TYPE) = struct
       ]
 
     let clickfinger_button_map : [ `LRM | `LMR ] typ =
-      make_enum "libinput_config_clickfinger_button_map" [
+      make_enum "libinput_config_clickfinger_button_map" ~requires:(1, 26) [
         "LIBINPUT_CONFIG_CLICKFINGER_MAP_LRM", `LRM;
         "LIBINPUT_CONFIG_CLICKFINGER_MAP_LMR", `LMR;
       ]
 
     let drag_lock_state : [ `Disabled | `Enabled_timeout | `Enabled_sticky ] typ =
-      make_enum "libinput_config_drag_lock_state" [
+      make_enum "libinput_config_drag_lock_state" ~requires:(1, 27) [
         "LIBINPUT_CONFIG_DRAG_LOCK_DISABLED", `Disabled;
         "LIBINPUT_CONFIG_DRAG_LOCK_ENABLED_TIMEOUT", `Enabled_timeout;
         "LIBINPUT_CONFIG_DRAG_LOCK_ENABLED_STICKY", `Enabled_sticky;
       ]
 
     let three_finger_drag_state : [ `Disabled | `Enabled_3fg | `Enabled_4fg ] typ =
-      make_enum "libinput_config_3fg_drag_state" [
+      make_enum "libinput_config_3fg_drag_state" ~requires:(1, 28) [
         "LIBINPUT_CONFIG_3FG_DRAG_DISABLED", `Disabled;
         "LIBINPUT_CONFIG_3FG_DRAG_ENABLED_3FG", `Enabled_3fg;
         "LIBINPUT_CONFIG_3FG_DRAG_ENABLED_4FG", `Enabled_4fg;
       ]
 
-    module Area_rectangle = struct
-      include Struct(struct type t = [`Libinput_config_area_rectangle] let name = "libinput_config_area_rectangle" end)
-      let x1 = field t "x1" double
-      let y1 = field t "y1" double
-      let x2 = field t "x2" double
-      let y2 = field t "y2" double
-      let () = seal t
-    end
+    module Area_rectangle = Area_rectangle
 
     module Send_events_mode = struct
       type t = Unsigned.UInt32.t

@@ -126,18 +126,23 @@ module Functions (F : FOREIGN) = struct
 
     module Config = struct
       module Setting = struct
-        type nonrec 'a t = {
-          set : (t -> 'a -> T.Config.status return) F.result;
-          get : (t -> 'a return) F.result;
-          get_default : (t -> 'a return) F.result;
-        }
+        type nonrec 'a t =
+          | Unsupported of 'a
+          | Setting of {
+              set : (t -> 'a -> T.Config.status return) F.result;
+              get : (t -> 'a return) F.result;
+              get_default : (t -> 'a return) F.result;
+            }
 
-        let make pattern ty =
-          let name x = Printf.sprintf pattern x in
-          let set = foreign (name "set") @@ t @-> ty @-> returning T.Config.status in
-          let get = foreign (name "get") @@ t @-> returning ty in
-          let get_default = foreign (name "get_default") @@ t @-> returning ty in
-          { set; get; get_default }
+        let make ?unless pattern ty =
+          match unless with
+          | Some (false, default) -> Unsupported default
+          | _ ->
+            let name x = Printf.sprintf pattern x in
+            let set = foreign (name "set") @@ t @-> ty @-> returning T.Config.status in
+            let get = foreign (name "get") @@ t @-> returning ty in
+            let get_default = foreign (name "get_default") @@ t @-> returning ty in
+            Setting { set; get; get_default }
       end
 
       module Tap = struct
@@ -149,8 +154,14 @@ module Functions (F : FOREIGN) = struct
       end
 
       module Three_finger_drag = struct
-        let get_finger_count = foreign "libinput_device_config_3fg_drag_get_finger_count" @@ t @-> returning int
+        let supported = Config.version >= (1, 28)
+
+        let get_finger_count =
+          if supported then Some (foreign "libinput_device_config_3fg_drag_get_finger_count" @@ t @-> returning int)
+          else None
+
         let enabled = Setting.make "libinput_device_config_3fg_drag_%s_enabled" T.Config.three_finger_drag_state
+            ~unless:(supported, `Disabled)
       end
 
       module Calibration_matrix = struct
@@ -227,6 +238,7 @@ module Functions (F : FOREIGN) = struct
         let get_methods = foreign "libinput_device_config_click_get_methods" @@ t @-> returning T.Config.Click_method.t
         let meth = Setting.make "libinput_device_config_click_%s_method" T.Config.Click_method.t
         let clickfinger_button_map = Setting.make "libinput_device_config_click_%s_clickfinger_button_map" T.Config.clickfinger_button_map
+            ~unless:(Config.version >= (1, 26), `LRM)
       end
 
       module Middle_emulation = struct
@@ -291,18 +303,23 @@ module Functions (F : FOREIGN) = struct
 
     module Config = struct
       module Setting = struct
-        type nonrec 'a t = {
-          set : (t -> 'a -> T.Config.status return) F.result;
-          get : (t -> 'a return) F.result;
-          get_default : (t -> 'a return) F.result;
-        }
+        type nonrec 'a t = 
+          | Unsupported of 'a
+          | Setting of {
+              set : (t -> 'a -> T.Config.status return) F.result;
+              get : (t -> 'a return) F.result;
+              get_default : (t -> 'a return) F.result;
+            }
 
-        let make pattern ty =
-          let name x = Printf.sprintf pattern x in
-          let set = foreign (name "set") @@ t @-> ty @-> returning T.Config.status in
-          let get = foreign (name "get") @@ t @-> returning ty in
-          let get_default = foreign (name "get_default") @@ t @-> returning ty in
-          { set; get; get_default }
+        let make ?unless pattern ty =
+          match unless with
+          | Some (false, default) -> Unsupported default
+          | _ ->
+            let name x = Printf.sprintf pattern x in
+            let set = foreign (name "set") @@ t @-> ty @-> returning T.Config.status in
+            let get = foreign (name "get") @@ t @-> returning ty in
+            let get_default = foreign (name "get_default") @@ t @-> returning ty in
+            Setting { set; get; get_default }
       end
 
       module Pressure_range = struct
@@ -315,9 +332,17 @@ module Functions (F : FOREIGN) = struct
       end
 
       module Eraser_button = struct
-        let get_modes = foreign "libinput_tablet_tool_config_eraser_button_get_modes" @@ t @-> returning bool_uint32
+        let supported = T.Eraser_button_mode.supported
+
+        let get_modes =
+          if supported then Some (foreign "libinput_tablet_tool_config_eraser_button_get_modes" @@ t @-> returning bool_uint32)
+          else None
+
         let mode = Setting.make "libinput_tablet_tool_config_eraser_button_%s_mode" T.Eraser_button_mode.t
+            ~unless:(supported, T.Eraser_button_mode.Default)
+
         let button = Setting.make "libinput_tablet_tool_config_eraser_button_%s_button" int_uint32
+            ~unless:(supported, 0)
       end
     end
   end

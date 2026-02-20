@@ -1,0 +1,7 @@
+depexts: [
+  [ "libinput-dev" ] {os-family = "alpine"}
+  [ "libinput-dev" ] {os-family = "debian"}
+  [ "libinput-devel" ] {os-family = "fedora"}
+  [ "libinput-devel" "libudev-devel" ] {os-family = "suse" | os-family = "opensuse"}
+]
+available: [ os = "linux" & arch != "arm32" & arch != "x86_32" ]

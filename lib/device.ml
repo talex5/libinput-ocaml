@@ -109,9 +109,20 @@ module Config = struct
   module Setting = C.Functions.Device.Config.Setting
   type 'a setting = 'a Setting.t
 
-  let set t (k : _ Setting.t) v = k.set (use t) v
-  let get t (k : _ Setting.t) = k.get (use t)
-  let get_default t (k : _ Setting.t) = k.get_default (use t)
+  let set t (k : _ Setting.t) v =
+    match k with
+    | Setting k -> k.set (use t) v
+    | Unsupported _ -> `Unsupported
+
+  let get t (k : _ Setting.t) =
+    match k with
+    | Setting k -> k.get (use t)
+    | Unsupported x -> x
+
+  let get_default t (k : _ Setting.t) =
+    match k with
+    | Setting k -> k.get_default (use t)
+    | Unsupported x -> x
 
   module Tap = struct
     module F = C.Functions.Device.Config.Tap
@@ -142,7 +153,7 @@ module Config = struct
     let matrix =
       let get c = fst (get c) in
       let get_default c = fst (get_default c) in
-      { Setting.set = F.set; get; get_default }
+      Setting.Setting { set = F.set; get; get_default }
 
     let get t = get (use t)
     let get_default t = get_default (use t)
@@ -153,7 +164,12 @@ module Config = struct
 
   module Three_finger_drag_state = struct
     module F = C.Functions.Device.Config.Three_finger_drag
-    let get_finger_count t = F.get_finger_count (use t)
+
+    let get_finger_count t =
+      match F.get_finger_count with
+      | Some fn -> fn (use t)
+      | None -> 0
+
     let enabled = F.enabled
   end
 
@@ -190,7 +206,7 @@ module Config = struct
       let set t v = F.set_rectangle t (Ctypes.addr (to_c v)) in
       let get t = of_c @@ F.get_rectangle t in
       let get_default t = of_c @@ F.get_default_rectangle t in
-      { Setting.set; get; get_default }
+      Setting.Setting { set; get; get_default }
   end
 
   module Send_events = struct

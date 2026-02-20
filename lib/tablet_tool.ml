@@ -54,9 +54,20 @@ module Config = struct
   module Setting = C.Functions.Tool.Config.Setting
   type 'a setting = 'a Setting.t
 
-  let set t (k : _ Setting.t) v = k.set (use t) v
-  let get t (k : _ Setting.t) = k.get (use t)
-  let get_default t (k : _ Setting.t) = k.get_default (use t)
+  let set t (k : _ Setting.t) v =
+    match k with
+    | Setting k -> k.set (use t) v
+    | Unsupported _ -> `Unsupported
+
+  let get t (k : _ Setting.t) =
+    match k with
+    | Setting k -> k.get (use t)
+    | Unsupported x -> x
+
+  let get_default t (k : _ Setting.t) =
+    match k with
+    | Setting k -> k.get_default (use t)
+    | Unsupported x -> x
 
   module Pressure_range = struct
     module F = C.Functions.Tool.Config.Pressure_range
@@ -84,7 +95,11 @@ module Config = struct
         | Unknown x -> Fmt.pf f "Unknown %Ld" x
     end
 
-    let get_modes t = F.get_modes (use t)
+    let get_modes t =
+      match F.get_modes with
+      | Some fn -> fn (use t)
+      | None -> false
+
     let mode = F.mode
     let button = F.button
   end

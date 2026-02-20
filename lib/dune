@@ -5,6 +5,7 @@
   (c_library_flags (:include c_library_flags.sexp))
   (foreign_stubs
     (language c)
+    (flags :standard (:include c_flags.sexp))
     (names stubs))
   (ctypes
     (external_library_name input)
@@ -27,5 +28,5 @@
     (generated_entry_point C)))
 
 (rule
-  (targets c_flags.sexp c_library_flags.sexp)
+  (targets config.ml c_flags.sexp c_library_flags.sexp)
   (action (run ./config/discover.exe)))
