@@ -53,7 +53,6 @@ type resource =
   | Tool of C.Types.Tool.t Ctypes.ptr Droppable.t
   | Mode_group of C.Types.Mode_group.t Ctypes.ptr Droppable.t
 
-(** @canonical Input.Context.t *)
 type _ t = {
   c : C.Types.Libinput.t Ctypes.ptr Droppable.t;
 
@@ -174,3 +173,19 @@ let get_event t =
   match C.Functions.get_event (use t) with
   | None -> None
   | Some e -> Some (register_resource t e ~free:C.Functions.Event.destroy)
+
+let get_log_handler t = t.log_handler
+let set_log_handler t x = t.log_handler <- x
+
+let make c =
+  { c; dtors = Hashtbl.create 100; free = Atomic.make []; resources = Weaktbl.create 100; log_handler = Any () }
+
+let destroy t =
+  (* GC finalisers for resources may run at any point, but they just add the dtor ID
+     to t.free, which we ignore. We clear [t.dtors], so if the user does
+     (incorrectly) try to interact with [t] in future, the worst that
+     will happen is a not-found exception trying to look up the ID. *)
+  Weaktbl.clear t.resources;
+  Hashtbl.iter (fun _id dtor -> dtor ()) t.dtors;
+  Hashtbl.clear t.dtors;
+  Droppable.destroy t.c

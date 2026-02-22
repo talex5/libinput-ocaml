@@ -348,6 +348,7 @@ module Functions (F : FOREIGN) = struct
   end
 
   module Mode_group = struct
+    type t = T.Mode_group.t ptr
     let t = ptr T.Mode_group.t
 
     let ref = foreign "libinput_tablet_pad_mode_group_ref" @@ t @-> returning_ignored t

@@ -1,4 +1,6 @@
-include Context0
+type 'a t = 'a Context0.t
+let use = Context0.use
+let destroy = Context0.destroy
 
 let keep v ~while_alive =
   Gc.finalise_last (fun () -> ignore (Sys.opaque_identity v)) while_alive
@@ -49,7 +51,7 @@ let with_interface { Interface.open_restricted; close_restricted } make =
   let c = make (Ctypes.addr interface) in
   keep (interface, open_restricted, close_restricted) ~while_alive:c;
   let c, _dtor = Droppable.make c unref in       (* ignoring dtor because we just leak on GC for the context itself *)
-  { c; dtors = Hashtbl.create 100; free = Atomic.make []; resources = Weaktbl.create 100; log_handler = Any () }
+  Context0.make c
 
 module Udev = struct
   let create interface udev =
@@ -96,23 +98,13 @@ module Log = struct
   type handler = Priority.t -> string -> unit
 
   let set_handler t handler =
-    t.log_handler <- Any (t.log_handler, handler);
+    Context0.set_log_handler t (Any (Context0.get_log_handler t, handler));
     C.Functions.Log.set_handler (use t) handler;
-    t.log_handler <- Any handler
+    Context0.set_log_handler t (Any handler)
 end
 
-let destroy t =
-  (* GC finalisers for resources may run at any point, but they just add the dtor ID
-     to t.free, which we ignore. We clear [t.dtors], so if the user does
-     (incorrectly) try to interact with [t] in future, the worst that
-     will happen is a not-found exception trying to look up the ID. *)
-  Weaktbl.clear t.resources;
-  Hashtbl.iter (fun _id dtor -> dtor ()) t.dtors;
-  Hashtbl.clear t.dtors;
-  Droppable.destroy t.c
-
 let dispatch t =
-  process_free_list t;
+  Context0.process_free_list t;
   match C.Functions.dispatch (use t) with
   | 0 -> ()
   | negerrno ->
