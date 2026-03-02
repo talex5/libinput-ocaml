@@ -2,7 +2,7 @@
 # (don't know why libcap isn't pulled in automatically by Nix's libinput package)
 
 ocamlPackages.buildDunePackage {
-  pname = "libinput-ocaml";
+  pname = "libinput";
   version = "0.1";
 
   src = ./.;
