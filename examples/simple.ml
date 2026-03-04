@@ -1,9 +1,8 @@
 let log_level = Input.Context.Log.Priority.Info
-let quit_key = Input.Keycode.of_int 16        (* Q *)
 
 (* Handle one event *)
 let handle : Input.Event.ty -> unit = function
-  | `Keyboard_key e when Input.Event.Keyboard.get_key e = quit_key ->
+  | `Keyboard_key e when Input.Event.Keyboard.get_key e = Input.Keycode.key_esc ->
     Fmt.pr "%a@." Input.Event.pp e;
     raise Exit
   | `Pointer_motion _ | `Tablet_tool_axis _ -> ()       (* Don't log noisy motion events *)
