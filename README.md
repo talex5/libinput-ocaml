@@ -1,5 +1,7 @@
 OCaml bindings for [libinput](https://gitlab.freedesktop.org/libinput/libinput).
 
+- [API documentation](https://talex5.github.io/libinput-ocaml/local/libinput/Input/index.html)
+
 This provides access to almost all of the libinput C API. The missing functions are:
 
 - `libinput_next_event_type`: the OCaml bindings combine the event type and payload,
