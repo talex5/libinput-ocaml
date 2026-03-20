@@ -243,35 +243,38 @@ module Config = struct
       points : float list;
     }
 
-    let rec accel_set_points c = function
-      | [] -> `Success
-      | { ty; step; points } :: xs ->
-        let points = Ctypes.CArray.of_list Ctypes.double points in
-        let npoints = Unsigned.Size_t.of_int points.alength in
-        match F.accel_set_points c ty step npoints points.astart with
-        | `Success -> accel_set_points c xs
-        | err -> err
-
     let set_accel t v =
-      let profile =
-        let module T = C.Types.Config.Accel_profile in
-        match v with
-        | `Flat -> T.flat
-        | `Adaptive -> T.adaptive
-        | `Custom _ -> T.custom
-      in
-      match F.accel_create profile with
-      | None -> Fmt.failwith "libinput_config_accel_create returned NULL"
-      | Some c ->
-        Fun.protect ~finally:(fun () -> F.accel_destroy c) @@ fun () ->
-        let funcs =
-          match v with
-          | `Flat | `Adaptive -> []
-          | `Custom funcs -> funcs
+      match F.custom with
+      | None -> `Unsupported
+      | Some custom ->
+        let rec accel_set_points c = function
+          | [] -> `Success
+          | { ty; step; points } :: xs ->
+            let points = Ctypes.CArray.of_list Ctypes.double points in
+            let npoints = Unsigned.Size_t.of_int points.alength in
+            match custom.accel_set_points c ty step npoints points.astart with
+            | `Success -> accel_set_points c xs
+            | err -> err
         in
-        match accel_set_points c funcs with
-        | `Success -> F.accel_apply (use t) c
-        | err -> err
+        let profile =
+          let module T = C.Types.Config.Accel_profile in
+          match v with
+          | `Flat -> T.flat
+          | `Adaptive -> T.adaptive
+          | `Custom _ -> Option.get T.custom
+        in
+        match custom.accel_create profile with
+        | None -> Fmt.failwith "libinput_config_accel_create returned NULL"
+        | Some c ->
+          Fun.protect ~finally:(fun () -> custom.accel_destroy c) @@ fun () ->
+          let funcs =
+            match v with
+            | `Flat | `Adaptive -> []
+            | `Custom funcs -> funcs
+          in
+          match accel_set_points c funcs with
+          | `Success -> custom.accel_apply (use t) c
+          | err -> err
   end
 
   module Left_handled = struct

@@ -169,7 +169,7 @@ module Config : sig
       val none : t
       val flat : t
       val adaptive : t
-      val custom : t
+      val custom : t option
     end
 
     val is_available : t -> bool
