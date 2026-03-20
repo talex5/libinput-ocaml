@@ -39,4 +39,4 @@ depexts: [
   [ "libinput-devel" "libudev-devel" ] {os-family = "suse" | os-family = "opensuse"}
 ]
 available: [ os = "linux" & arch != "arm32" & arch != "x86_32" ]
-x-ci-accept-failures: [ "centos-9" "debian-12" "ubuntu-22.04" ]
+x-ci-accept-failures: [ "centos-9" ]

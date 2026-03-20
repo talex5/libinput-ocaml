@@ -314,7 +314,7 @@ module Config = struct
 
   module Dwtp = struct
     module F = C.Functions.Device.Config.Dwtp
-    let is_available t = F.is_available (use t)
+    let is_available t = match F.is_available with Some f -> f (use t) | None -> false
     let enabled = F.enabled
   end
 
