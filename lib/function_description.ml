@@ -275,8 +275,11 @@ module Functions (F : FOREIGN) = struct
       end
 
       module Dwtp = struct
-        let is_available = foreign "libinput_device_config_dwtp_is_available" @@ t @-> returning bool_int
-        let enabled = Setting.make "libinput_device_config_dwtp_%s_enabled" T.Config.dwtp_state
+        let is_available = foreign_opt ~requires:(1, 21) "libinput_device_config_dwtp_is_available" @@ t @-> returning bool_int
+        let enabled =
+          match T.Config.dwtp_state with
+          | Some t -> Setting.make "libinput_device_config_dwtp_%s_enabled" t
+          | None -> Unsupported `Disabled
       end
 
       module Rotation = struct

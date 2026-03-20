@@ -17,7 +17,7 @@ module Types (F : Ctypes.TYPE) = struct
   let pp_version f (x, y) = Fmt.pf f "%d.%d" x y
 
   let () =
-    let min_version = (1, 22) in
+    let min_version = (1, 20) in
     if Config.version < min_version then
       Fmt.failwith "libinput-ocaml requires C libinput version %a or later (have %a)" pp_version min_version pp_version Config.version
 
@@ -392,12 +392,16 @@ module Types (F : Ctypes.TYPE) = struct
         prefix ^ "_DISABLED", `Disabled;
       ]
 
+    let make_enabled_enum_opt ~requires prefix =
+      if Config.version >= requires then Some (make_enabled_enum prefix)
+      else None
+
     let tap_state                = make_enabled_enum "LIBINPUT_CONFIG_TAP"
     let drag_state               = make_enabled_enum "LIBINPUT_CONFIG_DRAG"
     let middle_emulation_state   = make_enabled_enum "LIBINPUT_CONFIG_MIDDLE_EMULATION"
     let scroll_button_lock_state = make_enabled_enum "LIBINPUT_CONFIG_SCROLL_BUTTON_LOCK"
     let dwt_state                = make_enabled_enum "LIBINPUT_CONFIG_DWT"
-    let dwtp_state               = make_enabled_enum "LIBINPUT_CONFIG_DWTP"
+    let dwtp_state               = make_enabled_enum_opt ~requires:(1, 21) "LIBINPUT_CONFIG_DWTP"
 
     let tap_button_map : [ `LRM | `LMR ] typ =
       make_enum "libinput_config_tap_button_map" [
