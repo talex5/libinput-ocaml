@@ -34,8 +34,17 @@ let get_button_number t = F.get_button_number (ev t)
 let get_button_state t = F.get_button_state (ev t)
 let get_key t = F.get_key (ev t)
 let get_key_state t = F.get_key_state (ev t)
-let get_dial_delta_v120 t = F.get_dial_delta_v120 (ev t)
-let get_dial_number t = F.get_dial_number (ev t)
+
+let get_dial_delta_v120 t =
+  match F.get_dial_delta_v120 with
+  | Some f -> f (ev t)
+  | None -> failwith "Requires libinput 1.26 or later"
+
+let get_dial_number t =
+  match F.get_dial_number with
+  | Some f -> f (ev t)
+  | None -> 0
+
 let get_mode t = F.get_mode (ev t)
 
 let get_mode_group t =

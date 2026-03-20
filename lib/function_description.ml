@@ -20,6 +20,8 @@ module Functions (F : FOREIGN) = struct
   let bool_int = view ~read:((<>) 0) ~write:Bool.to_int int
   let bool_uint32 = view ~read:((<>) Unsigned.UInt32.zero) ~write:(fun t -> Unsigned.UInt32.of_int (Bool.to_int t)) uint32_t
 
+  let foreign_opt ~requires name typ = if Config.version >= requires then Some (foreign name typ) else None
+
   (* Supporing libraries *)
 
   let major = foreign "major" @@ PosixTypes.dev_t @-> returning uint
@@ -98,7 +100,7 @@ module Functions (F : FOREIGN) = struct
     let has_capability = foreign "libinput_device_has_capability" @@ t @-> T.Device_capability.t @-> returning bool_int
     let get_seat = foreign "libinput_device_get_seat" @@ t @-> returning (ptr T.Seat.t)
     let get_device_group = foreign "libinput_device_get_device_group" @@ t @-> returning Device_group.t
-    let get_id_bustype = foreign "libinput_device_get_id_bustype" @@ t @-> returning int_uint
+    let get_id_bustype = foreign_opt ~requires:(1, 26) "libinput_device_get_id_bustype" @@ (t @-> returning int_uint)
     let get_id_product = foreign "libinput_device_get_id_product" @@ t @-> returning int_uint
     let get_id_vendor = foreign "libinput_device_get_id_vendor" @@ t @-> returning int_uint
     let get_output_name = foreign "libinput_device_get_output_name" @@ t @-> returning (ptr_opt (const char))
@@ -115,7 +117,7 @@ module Functions (F : FOREIGN) = struct
       let get_num_mode_groups = foreign "libinput_device_tablet_pad_get_num_mode_groups" @@ t @-> returning int
       let get_mode_group = foreign "libinput_device_tablet_pad_get_mode_group" @@ t @-> int_uint @-> returning (ptr_opt T.Mode_group.t)
       let get_num_buttons = foreign "libinput_device_tablet_pad_get_num_buttons" @@ t @-> returning int
-      let get_num_dials = foreign "libinput_device_tablet_pad_get_num_dials" @@ t @-> returning int
+      let get_num_dials = foreign_opt ~requires:(1, 26) "libinput_device_tablet_pad_get_num_dials" @@ t @-> returning int
       let get_num_rings = foreign "libinput_device_tablet_pad_get_num_rings" @@ t @-> returning int
       let get_num_strips = foreign "libinput_device_tablet_pad_get_num_strips" @@ t @-> returning int
       let has_key = foreign "libinput_device_tablet_pad_has_key" @@ t @-> keycode @-> returning int
@@ -193,10 +195,10 @@ module Functions (F : FOREIGN) = struct
         module A = T.Config.Area_rectangle
 
         let name = Printf.sprintf "libinput_device_config_area_%s_rectangle"
-        let has_rectangle = foreign (name "has") @@ t @-> returning bool_int
-        let set_rectangle = foreign (name "set") @@ t @-> ptr A.t @-> returning T.Config.status
-        let get_rectangle = foreign (name "get") @@ t @-> returning A.t
-        let get_default_rectangle = foreign (name "get_default") @@ t @-> returning A.t
+        let has_rectangle = foreign_opt ~requires:(1, 26) (name "has") @@ t @-> returning bool_int
+        let set_rectangle = foreign_opt ~requires:(1, 26) (name "set") @@ t @-> ptr A.t @-> returning T.Config.status
+        let get_rectangle = foreign_opt ~requires:(1, 26) (name "get") @@ t @-> returning A.t
+        let get_default_rectangle = foreign_opt ~requires:(1, 26) (name "get_default") @@ t @-> returning A.t
       end
 
       module Send_events = struct
@@ -323,12 +325,12 @@ module Functions (F : FOREIGN) = struct
       end
 
       module Pressure_range = struct
-        let is_available = foreign "libinput_tablet_tool_config_pressure_range_is_available" @@ t @-> returning bool_int
-        let set = foreign "libinput_tablet_tool_config_pressure_range_set" @@ t @-> double @-> double @-> returning T.Config.status
-        let get_minimum = foreign "libinput_tablet_tool_config_pressure_range_get_minimum" @@ t @-> returning double
-        let get_maximum = foreign "libinput_tablet_tool_config_pressure_range_get_maximum" @@ t @-> returning double
-        let get_default_minimum = foreign "libinput_tablet_tool_config_pressure_range_get_default_minimum" @@ t @-> returning double
-        let get_default_maximum = foreign "libinput_tablet_tool_config_pressure_range_get_default_maximum" @@ t @-> returning double
+        let is_available = foreign_opt ~requires:(1, 26) "libinput_tablet_tool_config_pressure_range_is_available" @@ t @-> returning bool_int
+        let set = foreign_opt ~requires:(1, 26) "libinput_tablet_tool_config_pressure_range_set" @@ t @-> double @-> double @-> returning T.Config.status
+        let get_minimum = foreign_opt ~requires:(1, 26) "libinput_tablet_tool_config_pressure_range_get_minimum" @@ t @-> returning double
+        let get_maximum = foreign_opt ~requires:(1, 26) "libinput_tablet_tool_config_pressure_range_get_maximum" @@ t @-> returning double
+        let get_default_minimum = foreign_opt ~requires:(1, 26) "libinput_tablet_tool_config_pressure_range_get_default_minimum" @@ t @-> returning double
+        let get_default_maximum = foreign_opt ~requires:(1, 26) "libinput_tablet_tool_config_pressure_range_get_default_maximum" @@ t @-> returning double
       end
 
       module Eraser_button = struct
@@ -358,7 +360,7 @@ module Functions (F : FOREIGN) = struct
     let get_num_modes = foreign "libinput_tablet_pad_mode_group_get_num_modes" @@ t @-> returning int_uint
     let get_mode = foreign "libinput_tablet_pad_mode_group_get_mode" @@ t @-> returning int_uint
     let has_button = foreign "libinput_tablet_pad_mode_group_has_button" @@ t @-> int_uint @-> returning bool_int
-    let has_dial = foreign "libinput_tablet_pad_mode_group_has_dial" @@ t @-> int_uint @-> returning bool_int
+    let has_dial = foreign_opt ~requires:(1, 26) "libinput_tablet_pad_mode_group_has_dial" @@ t @-> int_uint @-> returning bool_int
     let has_ring = foreign "libinput_tablet_pad_mode_group_has_ring" @@ t @-> int_uint @-> returning bool_int
     let has_strip = foreign "libinput_tablet_pad_mode_group_has_strip" @@ t @-> int_uint @-> returning bool_int
     let button_is_toggle = foreign "libinput_tablet_pad_mode_group_button_is_toggle" @@ t @-> int_uint @-> returning bool_int
@@ -490,8 +492,8 @@ module Functions (F : FOREIGN) = struct
       let get_button_state = foreign "libinput_event_tablet_pad_get_button_state" @@ t @-> returning T.button_state
       let get_key = foreign "libinput_event_tablet_pad_get_key" @@ t @-> returning keycode
       let get_key_state = foreign "libinput_event_tablet_pad_get_key_state" @@ t @-> returning T.key_state
-      let get_dial_delta_v120 = foreign "libinput_event_tablet_pad_get_dial_delta_v120" @@ t @-> returning double
-      let get_dial_number = foreign "libinput_event_tablet_pad_get_dial_number" @@ t @-> returning int_uint
+      let get_dial_delta_v120 = foreign_opt ~requires:(1, 26) "libinput_event_tablet_pad_get_dial_delta_v120" @@ t @-> returning double
+      let get_dial_number = foreign_opt ~requires:(1, 26) "libinput_event_tablet_pad_get_dial_number" @@ t @-> returning int_uint
       let get_mode = foreign "libinput_event_tablet_pad_get_mode" @@ t @-> returning int_uint
       let get_mode_group = foreign "libinput_event_tablet_pad_get_mode_group" @@ t @-> returning (ptr T.Mode_group.t)
     end

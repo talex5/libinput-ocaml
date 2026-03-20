@@ -17,7 +17,7 @@ module Types (F : Ctypes.TYPE) = struct
   let pp_version f (x, y) = Fmt.pf f "%d.%d" x y
 
   let () =
-    let min_version = (1, 26) in
+    let min_version = (1, 25) in
     if Config.version < min_version then
       Fmt.failwith "libinput-ocaml requires C libinput version %a or later (have %a)" pp_version min_version pp_version Config.version
 
@@ -50,6 +50,9 @@ module Types (F : Ctypes.TYPE) = struct
   (* libinput types *)
 
   let enum_val x = constant x int64_t
+  let enum_val_opt ~requires x =
+    if Config.version >= requires then Some (constant x int64_t)
+    else None
 
   let user_data = ptr void
 
@@ -110,8 +113,8 @@ module Types (F : Ctypes.TYPE) = struct
     let num_lock = enum_val "LIBINPUT_LED_NUM_LOCK"
     let caps_lock = enum_val "LIBINPUT_LED_CAPS_LOCK"
     let scroll_lock = enum_val "LIBINPUT_LED_SCROLL_LOCK"
-    let compose = enum_val "LIBINPUT_LED_COMPOSE"
-    let kana = enum_val "LIBINPUT_LED_KANA"
+    let compose = enum_val_opt ~requires:(1, 26) "LIBINPUT_LED_COMPOSE"
+    let kana = enum_val_opt ~requires:(1, 26) "LIBINPUT_LED_KANA"
   end
 
   module Switch = struct
@@ -257,7 +260,7 @@ module Types (F : Ctypes.TYPE) = struct
         | Switch_toggle
         | Unknown of int64
 
-      let t = make_enum "libinput_event_type" ~unexpected:(fun x -> Unknown x) [
+      let t = make_enum "libinput_event_type" ~unexpected:(fun x -> Unknown x) ([
           "LIBINPUT_EVENT_NONE", None;
           "LIBINPUT_EVENT_DEVICE_ADDED", Device_added;
           "LIBINPUT_EVENT_DEVICE_REMOVED", Device_removed;
@@ -282,7 +285,6 @@ module Types (F : Ctypes.TYPE) = struct
           "LIBINPUT_EVENT_TABLET_PAD_RING", Tablet_pad_ring;
           "LIBINPUT_EVENT_TABLET_PAD_STRIP", Tablet_pad_strip;
           "LIBINPUT_EVENT_TABLET_PAD_KEY", Tablet_pad_key;
-          "LIBINPUT_EVENT_TABLET_PAD_DIAL", Tablet_pad_dial;
           "LIBINPUT_EVENT_GESTURE_SWIPE_BEGIN", Gesture_swipe_begin;
           "LIBINPUT_EVENT_GESTURE_SWIPE_UPDATE", Gesture_swipe_update;
           "LIBINPUT_EVENT_GESTURE_SWIPE_END", Gesture_swipe_end;
@@ -292,7 +294,12 @@ module Types (F : Ctypes.TYPE) = struct
           "LIBINPUT_EVENT_GESTURE_HOLD_BEGIN", Gesture_hold_begin;
           "LIBINPUT_EVENT_GESTURE_HOLD_END", Gesture_hold_end;
           "LIBINPUT_EVENT_SWITCH_TOGGLE", Switch_toggle;
-        ]
+        ] @ (
+            if Config.version > (1, 26) then [
+              "LIBINPUT_EVENT_TABLET_PAD_DIAL", Tablet_pad_dial;
+            ] else []
+          )
+        )
 
       let pp f = function
         | None -> Fmt.pf f "None"

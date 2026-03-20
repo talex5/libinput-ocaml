@@ -23,7 +23,12 @@ let get_context t = t.context
 let get_sysname t = F.get_sysname (use t)
 let get_name t = F.get_name (use t)
 let has_capability t = F.has_capability (use t)
-let get_id_bustype t = F.get_id_bustype (use t)
+
+let get_id_bustype t =
+  match F.get_id_bustype with
+  | Some f -> f (use t)
+  | None -> 0
+
 let get_id_product t = F.get_id_product (use t)
 let get_id_vendor t = F.get_id_vendor (use t)
 
@@ -99,7 +104,12 @@ module Tablet_pad = struct
       )
 
   let get_num_buttons t = F.get_num_buttons (use t) |> int_or_error
-  let get_num_dials t = F.get_num_dials (use t) |> int_or_error
+
+  let get_num_dials t =
+    match F.get_num_dials with
+    | Some f -> f (use t) |> int_or_error
+    | None -> Error ()
+
   let get_num_rings t = F.get_num_rings (use t) |> int_or_error
   let get_num_strips t = F.get_num_strips (use t) |> int_or_error
   let has_key t x = F.has_key (use t) x |> bool_or_error
@@ -203,10 +213,12 @@ module Config = struct
       c
 
     let rectangle =
-      let set t v = F.set_rectangle t (Ctypes.addr (to_c v)) in
-      let get t = of_c @@ F.get_rectangle t in
-      let get_default t = of_c @@ F.get_default_rectangle t in
-      Setting.Setting { set; get; get_default }
+      if Config.version > (1, 26) then (
+        let set t v = Option.get F.set_rectangle t (Ctypes.addr (to_c v)) in
+        let get t = of_c @@ Option.get F.get_rectangle t in
+        let get_default t = of_c @@ Option.get F.get_default_rectangle t in
+        Setting.Setting { set; get; get_default }
+      ) else Setting.Unsupported { x1 = 0.0; y1 = 0.0; x2 = 0.0; y2 = 0.0 }
   end
 
   module Send_events = struct
@@ -317,6 +329,9 @@ module Led = struct
 
   let none = 0L
   let ( + ) = Int64.logor
+
+  let compose = Option.value compose ~default:none
+  let kana = Option.value kana ~default:none
 end
 
 let led_update t leds = F.led_update (use t) leds
