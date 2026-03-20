@@ -14,6 +14,13 @@ end
 module Types (F : Ctypes.TYPE) = struct
   open F
 
+  let pp_version f (x, y) = Fmt.pf f "%d.%d" x y
+
+  let () =
+    let min_version = (1, 26) in
+    if Config.version < min_version then
+      Fmt.failwith "libinput-ocaml requires C libinput version %a or later (have %a)" pp_version min_version pp_version Config.version
+
   module Struct(X : sig type t val name : string end) = struct
     type t = X.t structure
     let t : t typ = structure X.name
@@ -49,7 +56,7 @@ module Types (F : Ctypes.TYPE) = struct
   let make_enum ?unexpected ?requires enum_name items =
     match requires with
     | Some min_version when min_version > Config.version ->
-      let error _ = Fmt.failwith "Requires libinput >= %a" Fmt.(pair int int) min_version in
+      let error _ = Fmt.failwith "Requires libinput >= %a" pp_version min_version in
       view uint64_t ~read:error ~write:error
     | _ ->
       let unexpected =
