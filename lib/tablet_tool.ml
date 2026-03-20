@@ -72,12 +72,13 @@ module Config = struct
   module Pressure_range = struct
     module F = C.Functions.Tool.Config.Pressure_range
 
-    let is_available t = F.is_available (use t)
-    let set t ~min ~max = F.set (use t) min max
-    let get_minimum t = F.get_minimum (use t)
-    let get_maximum t = F.get_maximum (use t)
-    let get_default_minimum t = F.get_default_minimum (use t)
-    let get_default_maximum t = F.get_default_maximum (use t)
+    let is_available t = match F.is_available with Some f -> f (use t) | None -> false
+
+    let set t ~min ~max = match F.set with Some f -> f (use t) min max | None -> `Unsupported
+    let get_minimum t = match F.get_minimum with Some f -> f (use t) | None -> 0.0
+    let get_maximum t = match F.get_maximum with Some f -> f (use t) | None -> 0.0
+    let get_default_minimum t = match F.get_default_minimum with Some f -> f (use t) | None -> 0.0
+    let get_default_maximum t = match F.get_default_maximum with Some f -> f (use t) | None -> 0.0
   end
 
   module Eraser_button = struct
