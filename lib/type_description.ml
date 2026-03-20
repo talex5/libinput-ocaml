@@ -17,13 +17,18 @@ module Types (F : Ctypes.TYPE) = struct
   let pp_version f (x, y) = Fmt.pf f "%d.%d" x y
 
   let () =
-    let min_version = (1, 25) in
+    let min_version = (1, 22) in
     if Config.version < min_version then
       Fmt.failwith "libinput-ocaml requires C libinput version %a or later (have %a)" pp_version min_version pp_version Config.version
 
   module Struct(X : sig type t val name : string end) = struct
     type t = X.t structure
     let t : t typ = structure X.name
+  end
+
+  module Struct_opt(X : sig type t val name : string val requires : int * int end) = struct
+    type t = X.t structure
+    let t : t typ option = if Config.version >= X.requires then Some (structure X.name) else None
   end
 
   let funptr x = lift_typ (Foreign.funptr x)
@@ -49,10 +54,12 @@ module Types (F : Ctypes.TYPE) = struct
 
   (* libinput types *)
 
-  let enum_val x = constant x int64_t
-  let enum_val_opt ~requires x =
-    if Config.version >= requires then Some (constant x int64_t)
+  let constant_opt ~requires x t =
+    if Config.version >= requires then Some (constant x t)
     else None
+
+  let enum_val x = constant x int64_t
+  let enum_val_opt ~requires x = constant_opt ~requires x int64_t
 
   let user_data = ptr void
 
@@ -376,7 +383,7 @@ module Types (F : Ctypes.TYPE) = struct
         "LIBINPUT_CONFIG_STATUS_INVALID", `Invalid;
       ]
 
-    module Accel = Struct(struct type t = [`Libinput_config_accel] let name = "libinput_config_accel" end)
+    module Accel = Struct_opt(struct type t = [`Libinput_config_accel] let name = "libinput_config_accel" let requires = (1, 23) end)
 
     let make_enabled_enum prefix : [`Enabled|`Disabled] typ =
       let enum_name = String.lowercase_ascii prefix ^ "_state" in
@@ -433,15 +440,16 @@ module Types (F : Ctypes.TYPE) = struct
       type t = Unsigned.UInt32.t
       let t = uint32_t
       let enum_val x = constant x uint32_t
+      let enum_val_opt ~requires x = constant_opt ~requires x uint32_t
       let none = enum_val "LIBINPUT_CONFIG_ACCEL_PROFILE_NONE"
       let flat = enum_val "LIBINPUT_CONFIG_ACCEL_PROFILE_FLAT"
       let adaptive = enum_val "LIBINPUT_CONFIG_ACCEL_PROFILE_ADAPTIVE"
-      let custom = enum_val "LIBINPUT_CONFIG_ACCEL_PROFILE_CUSTOM"
+      let custom = enum_val_opt ~requires:(1, 23) "LIBINPUT_CONFIG_ACCEL_PROFILE_CUSTOM"
     end
 
     type accel_type = [`Fallback | `Motion | `Scroll ]
     let accel_type : accel_type typ =
-      make_enum "libinput_config_accel_type" [
+      make_enum ~requires:(1, 23) "libinput_config_accel_type" [
         "LIBINPUT_ACCEL_TYPE_FALLBACK", `Fallback;
         "LIBINPUT_ACCEL_TYPE_MOTION", `Motion;
         "LIBINPUT_ACCEL_TYPE_SCROLL", `Scroll;

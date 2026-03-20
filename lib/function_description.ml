@@ -210,17 +210,31 @@ module Functions (F : FOREIGN) = struct
         let is_available = foreign "libinput_device_config_accel_is_available" @@ t @-> returning bool_int
         let speed = Setting.make "libinput_device_config_accel_%s_speed" double
 
-        let accel_create = foreign "libinput_config_accel_create" @@ T.Config.Accel_profile.t @-> returning (ptr_opt T.Config.Accel.t)
-        let accel_destroy = foreign "libinput_config_accel_destroy" @@ ptr T.Config.Accel.t @-> returning void
-        let accel_apply = foreign "libinput_device_config_accel_apply" @@ t @-> ptr T.Config.Accel.t @-> returning T.Config.status
+        type custom = {
+          accel_create : (Unsigned.uint32 -> T.Config.Accel.t Ctypes.ptr option return) F.result;
+          accel_destroy : (T.Config.Accel.t Ctypes.ptr -> unit return) F.result;
+          accel_apply : (t -> T.Config.Accel.t Ctypes.ptr -> T.Config.status return) F.result;
+          accel_set_points :
+            (T.Config.Accel.t Ctypes.ptr ->
+             T.Config.accel_type ->
+             float ->
+             PosixTypes.size_t -> float Ctypes.ptr -> T.Config.status return) F.result;
+        }
 
-        let accel_set_points = foreign "libinput_config_accel_set_points" @@
-          ptr T.Config.Accel.t @->
-          T.Config.accel_type @->
-          double @->
-          size_t @->
-          ptr double @->
-          returning T.Config.status
+        let custom =
+          T.Config.Accel.t |> Option.map (fun accel -> {
+                accel_create = foreign "libinput_config_accel_create" @@ T.Config.Accel_profile.t @-> returning (ptr_opt accel);
+                accel_destroy = foreign "libinput_config_accel_destroy" @@ ptr accel @-> returning void;
+                accel_apply = foreign "libinput_device_config_accel_apply" @@ t @-> ptr accel @-> returning T.Config.status;
+                accel_set_points = foreign "libinput_config_accel_set_points" @@
+                  ptr accel @->
+                  T.Config.accel_type @->
+                  double @->
+                  size_t @->
+                  ptr double @->
+                  returning T.Config.status;
+              }
+            )
 
         let accel_get_profiles = foreign "libinput_device_config_accel_get_profiles" @@ t @-> returning T.Config.Accel_profile.t
         let profile = Setting.make "libinput_device_config_accel_%s_profile" T.Config.Accel_profile.t
