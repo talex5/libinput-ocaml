@@ -16,6 +16,7 @@
  (description "Input device management and event handling library")
  (depends
   (ocaml (>= 5.3.0))
+  conf-libinput
   (ctypes (>= 0.23.0))
   (ctypes-foreign (>= 0.23.0))
   (fmt (>= 0.8.9))))
