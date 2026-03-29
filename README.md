@@ -1,5 +1,6 @@
 OCaml bindings for [libinput](https://gitlab.freedesktop.org/libinput/libinput).
 
+- [Tutorial](https://roscidus.com/blog/blog/2026/03/28/input-devices/)
 - [API documentation](https://talex5.github.io/libinput-ocaml/local/libinput/Input/index.html)
 
 This provides access to almost all of the libinput C API. The missing functions are:
