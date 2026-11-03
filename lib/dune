@@ -9,6 +9,7 @@
     (names stubs))
   (ctypes
     (external_library_name input)
+    (deps stubs.h)
     (build_flags_resolver
       ; Unlike dune-configurator, dune's cstubs support doesn't work with pkgconf,
       ; so get the flags via configurator instead:
